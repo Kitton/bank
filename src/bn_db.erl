@@ -137,7 +137,7 @@ save(Table, Object) ->
 
 -spec read(atom(), bn_model:object()) -> [bn_model:object()].
 read(Table, Id) ->
-  Rows = ets:read(Table, Id),
+  Rows = ets:lookup(Table, Id),
   lists:map(fun to_model/1, Rows).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
