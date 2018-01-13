@@ -17,7 +17,9 @@
 
 %% Exports
 -export([
-         transfer/4
+         transfer/4,
+         open_account/2,
+         new_customer/1
         ]).
 
 %% Macro definitions
@@ -113,6 +115,61 @@ transfer_sm(consolidate, Transfer = #{kind := Kind}, #{external := Bank}) ->
       end
   end.
 
+
+%% @doc Opens a new account in the bank
+-spec open_account(Customer :: bn_model:customer_id(),
+                   Currency :: bn_model:currency()) -> {ok, bn_model:account()} |
+                                                       {error, customer_unknown} |
+                                                       {error, bad_currency}.
+open_account(Customer, Currency) ->
+  case bn_cer:available(Currency) of
+    false ->
+      {error, bad_currency};
+    true ->
+      Result =
+        bn_dal:create_account(#{customer => Customer, currency => Currency}),
+        case Result of
+          error ->
+            {error, customer_unknown};
+          {ok, Account} ->
+            {ok, Account}
+        end
+  end.
+      
+%% @doc Registers a new customer in the bank
+-spec new_customer(Name :: binary()) -> {ok, bn_model:customer()}.
+new_customer(Name) ->
+  bn_dal:create_customer(#{name => Name}).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Internal functions
+-spec identify_account(Id :: binary()) -> {local, bn_model:account()} | {external, binary()} | error.
+identify_account(Id) ->
+  case bn_dal:read_account(Id) of
+    [Account] ->
+      {local, Account};
+    [] ->
+      case get_bank(Id) of
+        error ->
+          error;
+        BankCode ->
+          {external, BankCode}
+      end
+  end.
+
+%% @doc Returns the bank code of the given IBAN code. For this exercise, the IBAN must follow spanish format
+-spec get_bank(binary()) -> binary() | error.
+get_bank(Account) when size(Account) == 24 ->
+  case Account of
+    <<_Country:2/binary, _Control:2/binary, Bank:4/binary, _/binary>> ->
+      Bank;
+    _ ->
+      error
+  end;
+get_bank(_) ->
+  error.
+
 %% @doc Consolidates an internal transfer: Increases the receiver's
 %% available and balance and reduces the sender's balance
 -spec consolidate_internal(bn_model:transfer()) -> {ok, bn_model:transfer()}.
@@ -156,35 +213,6 @@ consolidate_external_out(Transfer) ->
 -spec fail(bn_model:transfer()) -> {ok, bn_model:transfer()}.
 fail(#{id := Id}) ->
   {ok, _} = bn_dal:update_transfer(Id, #{failed => bn_time:now()}). 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Internal functions
--spec identify_account(Id :: binary()) -> {local, bn_model:account()} | {external, binary()} | error.
-identify_account(Id) ->
-  case bn_dal:read_account(Id) of
-    [Account] ->
-      {local, Account};
-    [] ->
-      case get_bank(Id) of
-        error ->
-          error;
-        BankCode ->
-          {external, BankCode}
-      end
-  end.
-
-%% @doc Returns the bank code of the given IBAN code. For this exercise, the IBAN must follow spanish format
--spec get_bank(binary()) -> binary() | error.
-get_bank(Account) when size(Account) == 24 ->
-  case Account of
-    <<_Country:2/binary, _Control:2/binary, Bank:4/binary, _/binary>> ->
-      Bank;
-    _ ->
-      error
-  end;
-get_bank(_) ->
-  error.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Tests start
