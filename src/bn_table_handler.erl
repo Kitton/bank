@@ -20,6 +20,7 @@
 %% Exports
 -export([
          start_link/1,
+         start_link/2,
          stop/1,
          create/2,
          delete/2,
@@ -37,6 +38,16 @@
 
 %% Macro definitions
 
+-define(TABLE_OPTIONS,
+        [
+         set,
+         public, %% Accessed by the DAL server for reading/writing
+         named_table,
+         {keypos, 2}, %% For records, 1st element is record name
+         {write_concurrency, false}, %% Only one process (DAL server) can write
+         {read_concurrency, true} %% Dirty reads are allowed
+        ]).
+
 %% Type Definitions
 
 %% -type state() ::
@@ -48,10 +59,12 @@
 %% Public functions
 
 %% @doc Starts the gen_server
-start_link(Name) when is_atom(Name) ->
-  gen_server:start_link({local, Name}, ?MODULE, [], []);
-start_link(_) ->
-  error(badarg).
+start_link(Name) ->
+  start_link(Name, []).
+
+%% @doc Starts the gen_server
+start_link(Name, Tables) ->
+  gen_server:start_link({local, Name}, ?MODULE, [Tables], []).
 
 %% @doc Stops the gen_server
 stop(Name) ->
@@ -76,20 +89,16 @@ all(Server) ->
 %% Behaviour Callbacks
 
 %% @doc init
-init([]) ->
-  {ok, #{tables => []}}.
+init([Tables]) ->
+  lists:foreach(fun(Table) ->
+                    ets:new(Table, ?TABLE_OPTIONS)
+                end, Tables),
+  {ok, #{tables => Tables}}.
 
 %% @doc handle_call
 %% Create a table
 handle_call({create_table, Name}, _, State = #{tables := Tables}) ->
-  Options = [
-             set,
-             public,
-             named_table,
-             {write_concurrency, false},
-             {read_concurrency, true}
-            ],
-  try ets:new(Name, Options) of
+  try ets:new(Name, ?TABLE_OPTIONS) of
       _ -> {reply, ok, State#{tables := [Name|Tables]}}
   catch
     error:badarg -> {reply, error, State}
@@ -127,18 +136,27 @@ code_change(_OldVersion, State, _Extra) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Internal functions
-      
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Tests start
 -ifdef(TEST).
 
-start_stop_test() ->
-  ?_test(
-     begin
-       {ok, _} = start_link(test_server),
-       ok = stop(test_server)
-     end
-    ).
+start_stop_test_() ->
+  [
+   ?_test(
+      begin
+        {ok, _} = start_link(test_server, []),
+        ok = stop(test_server)
+      end
+     ),
+   ?_test(
+      begin
+        {ok, _} = start_link(test_server, [a, b, c]),
+        ?assertEqual([a, b, c], all(test_server)),
+        ok = stop(test_server)
+      end
+     )
+  ].
 
 create_tables_test() ->
   ?_test(
