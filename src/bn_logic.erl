@@ -69,9 +69,10 @@ transfer_sm(identify_receiver, Transfer = #{receiver := Receiver}, Ctx) ->
   end;
 transfer_sm(check_value, Transfer, Ctx) ->
   #{value := Value, currency := Currency, kind := Kind} = Transfer,
-  if Currency /= <<"EUR">> ->
+  case bn_cer:available(Currency) of
+    true ->
       {error, {bad_currency, #{currency => Currency}}};
-     true ->
+    false ->
       %% NOTE (new transfers): Refactor this if new transfer kinds are allowed
       case Kind of
         internal ->
@@ -85,7 +86,11 @@ transfer_sm(check_value, Transfer, Ctx) ->
       end
   end;
 transfer_sm(commit, Transfer, Ctx) ->
-  case bn_dal:dec_available(sender, Transfer) of
+  #{value := Value,
+    commission := Commission,
+    currency := Currency,
+    sender := Sender} = Transfer,
+  case bn_dal:dec_available(Sender, Value + Commission, Currency) of
     ok ->
       {ok, Created} = bn_dal:create_transfer(Transfer),
       transfer_sm(consolidate, Created, Ctx);
@@ -111,25 +116,39 @@ transfer_sm(consolidate, Transfer = #{kind := Kind}, #{external := Bank}) ->
 %% @doc Consolidates an internal transfer: Increases the receiver's
 %% available and balance and reduces the sender's balance
 -spec consolidate_internal(bn_model:transfer()) -> {ok, bn_model:transfer()}.
-consolidate_internal(Transfer = #{id := Id}) ->
-  bn_dal:inc_available(receiver, Transfer),
-  bn_dal:inc_balance(receiver, Transfer),
-  bn_dal:dec_balance(sender, Transfer),
+consolidate_internal(Transfer) ->
+  #{id := Id,
+    sender := Sender,
+    receiver := Receiver,
+    value := Value,
+    currency := Currency,
+    commission := Commission } = Transfer,
+  bn_dal:inc_available(Receiver, Value, Currency),
+  bn_dal:inc_balance(Receiver, Value, Currency),
+  bn_dal:dec_balance(Sender, Value + Commission, Currency),
   {ok, _} = bn_dal:update_transfer(Id, #{consolidated => bn_time:now()}).
   
 %% @doc Consolidates an external, incoming transfer: Increases the receiver's
 %% available and balance
 -spec consolidate_external_in(bn_model:transfer()) -> {ok, bn_model:transfer()}.
-consolidate_external_in(Transfer = #{id := Id}) ->
-  bn_dal:inc_available(receiver, Transfer),
-  bn_dal:inc_balance(receiver, Transfer),
+consolidate_external_in(Transfer) ->
+  #{id := Id,
+    receiver := Receiver,
+    value := Value,
+    currency := Currency} = Transfer,
+  bn_dal:inc_available(Receiver, Value, Currency),
+  bn_dal:inc_balance(Receiver, Value, Currency),
   {ok, _} = bn_dal:update_transfer(Id, #{consolidated => bn_time:now()}).
 
 %% @doc Consolidates an external, outgoing transfer: Decreases the
 %% sender's balance
 -spec consolidate_external_out(bn_model:transfer()) -> {ok, bn_model:transfer()}.
 consolidate_external_out(Transfer) ->
-  bn_dal:dec_balance(sender, Transfer),
+  #{sender := Sender,
+    value := Value,
+    currency := Currency,
+    commission := Commission } = Transfer,
+  bn_dal:dec_balance(Sender, Value + Commission, Currency),
   {ok, Transfer}.
 
 %% @doc Fails a transfer because it could not be consolidated with the
