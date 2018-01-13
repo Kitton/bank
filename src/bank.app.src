@@ -1,0 +1,17 @@
+{application, bank,
+ [{description, "Bank server for the Digital Origin technical challenge"},
+  {vsn, "0.0.1"},
+  {registered, []},
+  {mod, { bank_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    cowboy,
+    sync
+   ]},
+  {env,[]},
+  {modules, []},
+  {maintainers, []},
+  {licenses, []},
+  {links, []}
+ ]}.
