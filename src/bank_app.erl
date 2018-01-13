@@ -1,18 +1,34 @@
-%%%-------------------------------------------------------------------
-%% @doc bank public API
-%% @end
-%%%-------------------------------------------------------------------
+%% @author Juan Luis Gamella Martin
+%%
+%% See LICENSE.txt file for detailed information.
+%%
+%% @doc Bank Public API
 
 -module(bank_app).
 
+%% Load eunit
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
+%% Behaviour
 -behaviour(application).
 
-%% Application callbacks
--export([start/2, stop/1]).
+%% Includes
 
-%%====================================================================
-%% API
-%%====================================================================
+%% Exports
+-export([start/2,
+         stop/1]).
+
+%% Macro definitions
+-define(SERVER, ?MODULE).
+
+%% Type Definitions
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Public functions
+
+%% Application callbacks
 
 start(_StartType, _StartArgs) ->
   bn_log:info(?MODULE, ?LINE, "Starting application"),
@@ -25,10 +41,18 @@ start(_StartType, _StartArgs) ->
                               ),
   bank_sup:start_link().
 
-%%--------------------------------------------------------------------
 stop(_State) ->
   ok.
 
-%%====================================================================
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Internal functions
-%%====================================================================
+      
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Tests start
+-ifdef(TEST).
+
+basic_test_() ->
+  [].
+
+%% Tests end
+-endif.
