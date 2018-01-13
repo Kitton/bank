@@ -39,10 +39,10 @@
 
 %% Type Definitions
 
--type state() ::
-        #{
-           tables => [atom()]
-         }.
+%% -type state() ::
+%%         #{
+%%            tables => [atom()]
+%%          }.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Public functions
@@ -72,6 +72,7 @@ delete(Table, Server) ->
 all(Server) ->
   gen_server:call(Server, all).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Behaviour Callbacks
 
 %% @doc init
