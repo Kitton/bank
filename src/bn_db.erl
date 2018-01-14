@@ -177,6 +177,7 @@ from_model(Name, Object) ->
 model_test_() ->
   TransferP = #transfer{ id = <<"id">>,
                          sender = <<"sender">>,
+                         type = internal,
                          receiver = <<"receiver">>,
                          value = <<"value">>,
                          currency = <<"EUR">>,
@@ -190,6 +191,7 @@ model_test_() ->
                      },
   TransferL = #{ id => <<"id">>,
                  sender => <<"sender">>,
+                 type => internal,
                  receiver => <<"receiver">>,
                  value => <<"value">>,
                  currency => <<"EUR">>,

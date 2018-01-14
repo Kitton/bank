@@ -2,7 +2,7 @@
 %%
 %% See LICENSE.txt file for detailed information.
 %%
-%% @doc This module contains logic to handle time and generate timestamps
+%% @doc This module contains the definition of the logical model
 
 -module(bn_model).
 

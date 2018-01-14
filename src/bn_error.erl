@@ -17,14 +17,16 @@
 
 %% Exports
 -export([
-         serial_error/2
+         error_resp/2
         ]).
 
 %% Macro definitions
 
 %% Type Definitions
 
--type error_type() ::
+-type error_type() :: logic_error() | api_error().
+
+-type logic_error() ::
         sender_unidentified
       | sender_not_local
       | receiver_unidentified
@@ -33,39 +35,28 @@
       | no_balance
       | consolidation_failed.
 
+-type api_error() ::
+        method_not_allowed |
+        bad_request.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Public functions
 
 %% @doc Serializes an error
 -spec serial_error(error_type(), maps:map()) -> maps:map().
-serial_error(sender_unidentified, _Args) ->
-  #{type => sender_unidentified,
-    description => <<"TBD">>,
-    args => #{}};
-serial_error(sender_not_local, _Args) ->
-  #{type => sender_not_local,
-    description => <<"TBD">>,
-    args => #{}};
-serial_error(receiver_unidentified, _Args) ->
-  #{type => receiver_unidentified,
-    description => <<"TBD">>,
-    args => #{}};
-serial_error(bad_currency, _Args) ->
-  #{type => bad_currency,
-    description => <<"TBD">>,
-    args => #{}};
-serial_error(bad_value, _Args) ->
-  #{type => bad_value,
-    description => <<"TBD">>,
-    args => #{}};
-serial_error(no_balance, _Args) ->
-  #{type => no_balance,
-    description => <<"TBD">>,
-    args => #{}};
-serial_error(consolidation_failed, _Args) ->
-  #{type => consolidation_failed,
-    description => <<"TBD">>,
-    args => #{}}.
+serial_error(Type, Args) ->
+  #{type => Type,
+    description => <<"To be defined">>,
+    args => Args
+   }.
+
+%% @doc Cowboy dependant: Prepares an error response
+error_resp(Req, {ErrorType, Args}) ->
+  Map = serial_error(ErrorType, Args),
+  Body = cw_json:encode(Map),
+  cowboy_req:set_resp_header(<<"Content-Type">>,
+                             <<"application/json">>,
+                             cowboy_req:set_resp_body(Body, Req)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Internal functions
