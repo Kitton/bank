@@ -1,5 +1,69 @@
 # Overview
 
+## Part 1
+
+See the [data mode](#data-model)
+
+## Part 2
+
+The bank server has been developed over a cowboy HTTP server. A node is started for each bank (in this case Bank_A and Bank_B), and they communicate to consolidate _external_ transactions.
+
+The transfer assistant is a Phoenix server. It is still under construction and no web interface is provided. The module `Assistant.Banks` connects to the banks' HTTP API to order and retrieve transfers.
+
+To launch the demo, execute
+```
+$ ./demo.sh compile
+```
+
+and then
+
+```
+$ ./demo.sh launch
+```
+
+## Part 3
+
+**How​ would​ you​ improve​ your​ solution?​ What​ would​ be​ the​ next​ steps?**
+
+The part that requires most work is the Phoenix server, as very little work has been done here. In this sense, the next step would be to give the assistant a web interface from where transfers can be ordered and viewed.
+
+**After implementation, is there any design decision that you would have done different?**
+
+Because this is a demo, I should have lessened the requirements on the architecture of the bank server, in order to free some time to give the transfer assistant a web interface.
+
+I have used ETS tables as the storage implementation, which means the database is destroyed every time the servers are restarted. Using DETS would have taken almost the same time and would have allowed for persistence.
+
+The implementation of the Data Access Layer in the module `bn_dal.erl` is extremely verbose and would probably benefit from some refactoring.
+
+**How would you adapt your solution if transfers are not instantaneous?**
+
+The solution is already capable of handling non-instantaneous transactions. Timestamps are stored for each transaction, helping determine its state:
+
+- **created**: The transaction has been created and the sender's available balance deducted.
+- **preconsolidated**: The consolidation process has started (eg. a call has been made to an external bank's servers). The transaction remains in this state until confirmation is received, at which point the transaction enters the _consolidated_ state.
+- **consolidated**: The transaction is completed. The sender's real balance is deducted and the receiver's available and real balance are increased.
+
+The code responsible for this can be seen at line 107 of module `bank/src/bn_logic.erl`:
+
+```erlang
+transfer_sm(consolidate, Transfer = #{type := Type}, Ctx) ->
+  case Type of
+    internal ->
+      consolidate_internal(Transfer);
+    external ->
+      #{external := Bank} = Ctx,
+      case bn_comm:consolidate(Bank, Transfer) of
+        {ok, Updated} ->
+          consolidate_external_out(Updated);
+        {wait, PreConsolidated} ->
+          {ok, PreConsolidated};
+        {error, Reason} ->
+          fail(Transfer),
+          {error, {consolidation_failed, #{reason => Reason}}}
+      end
+  end.
+```
+
 # Bank
 
 Bank is an erlang application set on top of a Cowboy server. It is a _toy_ banking server, which provides the following functionality:
