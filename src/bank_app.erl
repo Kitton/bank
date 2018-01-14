@@ -44,7 +44,9 @@ start(_, _) ->
                                [{port, Port}],
                                #{env => #{dispatch => Dispatch}}
                               ),
-  bank_sup:start_link().
+  R = bank_sup:start_link(),
+  populate_example(),
+  R.
 
 stop(_State) ->
   ok.
@@ -63,7 +65,27 @@ fetch_or_set(Env, Default) ->
                      [Env, Default]),
       Default
     end.
-  
+
+%% @doc Populates the example given for the Digital Origin Challenge
+populate_example() ->
+  {ok, Bank} = application:get_env(bank, bank_code),
+  case Bank of
+    <<"000A">> -> %% Bank A
+      %% Create an account for Jose with 20k EUR
+      {ok, #{id := Id}} = bank:new_customer(<<"Jose">>),
+      bn_db:save(accounts, #{id => <<"ESXX000A1">>, customer => Id, created => bn_time:now(), available => 20000 * 100, balance => 20000 * 100, currency => <<"EUR">>});
+    <<"000B">> -> %% Bank B
+      %% Create an account for Antonio with 20k EUR
+      {ok, #{id := Id1}} = bank:new_customer(<<"Antonio">>),
+      bn_db:save(accounts, #{id => <<"ESXX000B1">>, customer => Id1, created => bn_time:now(), available => 20000 * 100, balance => 20000 * 100, currency => <<"EUR">>}),
+      %% Create an account for Antonio with 20k EUR
+      {ok, #{id := Id2}} = bank:new_customer(<<"Maria">>),
+      bn_db:save(accounts, #{id => <<"ESXX000B2">>, customer => Id2, created => bn_time:now(), available => 0, balance => 0, currency => <<"EUR">>});
+    _ ->
+      ok
+  end.
+      
+       
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Tests start
 -ifdef(TEST).

@@ -83,7 +83,7 @@
 create(Table, Object) ->
   Name = object_name(Table),
   Row = from_model(Name, Object),
-  io:format("ROW: ~p~n", [Row]),
+  io:format("INSERT ~p~n", [Row]),
   case ets:insert_new(Table, Row) of
     true ->
       {ok, to_model(Row)};
@@ -96,6 +96,7 @@ create(Table, Object) ->
 save(Table, Object) ->
   Name = object_name(Table),
   Row = from_model(Name, Object),
+  io:format("INSERT ~p~n", [Row]),
   ets:insert(Table, Row),
   {ok, to_model(Row)}.
 
