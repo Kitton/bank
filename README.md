@@ -1,7 +1,3 @@
-# Index
-
-[TOC]
-
 # Overview
 
 ## Part 1
@@ -192,6 +188,33 @@ There is a strong separation between the physical and logical models, to the poi
 
 New **transaction types** can be added with little to no effort. Multi-currency support can be added by modifying only two functions in the `bn_cer.erl` module.
 
+
+## Modules
+
+All modules have internal documentation. To give a more general perspective,
+
+**Application modules**
+- `bank.erl`: Contains the Banks API towards the transfer assistant
+- `bank_app.erl`
+- `bank_sup.erl`
+
+**Business logic modules**
+- `bn_logic.erl`: Main logic module (transfer cycles, etc).
+- `bn_cer.erl`
+- `bn_comm.erl`
+- `bn_error.erl`
+
+**Data model and DB**
+- `bn_dal.erl`: Data Access Layer gen_server: Ensures concurrency-safe access to DB.
+- `bn_db.erl`: Definition of physical model and DB access
+- `bn_model.erl`: Definition of logical model
+- `bn_table_handler.erl`
+
+**Misc**
+- `bn_time.erl`
+- `bn_utils.erl`
+- `bn_log.erl`
+
 ## API
 
 The _bank_ server offers a HTTP JSON API with three resources,
@@ -250,29 +273,3 @@ v    {
     }
 ]
 ```
-
-## Modules
-
-All modules have internal documentation. To give a more general perspective,
-
-**Application modules**
-- `bank.erl`: Contains the Banks API towards the transfer assistant
-- `bank_app.erl`
-- `bank_sup.erl`
-
-**Business logic modules**
-- `bn_logic.erl`: Main logic module (transfer cycles, etc).
-- `bn_cer.erl`
-- `bn_comm.erl`
-- `bn_error.erl`
-
-**Data model and DB**
-- `bn_dal.erl`: Data Access Layer gen_server: Ensures concurrency-safe access to DB.
-- `bn_db.erl`: Definition of physical model and DB access
-- `bn_model.erl`: Definition of logical model
-- `bn_table_handler.erl`
-
-**Misc**
-- `bn_time.erl`
-- `bn_utils.erl`
-- `bn_log.erl`
