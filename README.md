@@ -33,11 +33,13 @@ By default, the server listens on port `8000`. The *port* and *bank code* (ie. I
 
 Conceptually, banks have customers, and customers have accounts with which they make transactions,
 
+![Conceptual Data Model](priv/conceptual.png)
 
 ### Logical Data Model
 
 Because each bank holds the information of its customers and their accounts in its own database, the logical model differs slightly from the conceptual one,
 
+![Logical Data Model](priv/logical.png)
 
 ### Physical Data Model
 
