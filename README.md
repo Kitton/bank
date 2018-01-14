@@ -60,7 +60,7 @@ returns all the transfers where account `ESXX000A1` is either the sender or the 
 
 **How​ would​ you​ improve​ your​ solution?​ What​ would​ be​ the​ next​ steps?**
 
-The part that requires most work is the Phoenix server, as very little work has been done here. In this sense, the next step would be to give the assistant a web interface from where transfers can be ordered and viewed.
+As of right now, the part that requires the most work is the Phoenix server, as very little work has been done there. In this sense, the next step would be to give the assistant a web interface from where transfers can be ordered and viewed.
 
 **After implementation, is there any design decision that you would have done different?**
 
@@ -72,7 +72,7 @@ The implementation of the Data Access Layer in the module `bn_dal.erl` is extrem
 
 **How would you adapt your solution if transfers are not instantaneous?**
 
-The solution is already capable of handling non-instantaneous transactions. Timestamps are stored for each transaction, helping determine its state:
+The solution is already capable of handling non-instantaneous transactions in a consistent manner. Timestamps are stored for each transaction, helping determine its state:
 
 - **created**: The transaction has been created and the sender's available balance deducted.
 - **preconsolidated**: The consolidation process has started (eg. a call has been made to an external bank's servers). The transaction remains in this state until confirmation is received, at which point the transaction enters the _consolidated_ state.
