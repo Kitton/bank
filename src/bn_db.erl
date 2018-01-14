@@ -14,6 +14,7 @@
 -endif.
 
 %% Behaviour
+-include_lib("stdlib/include/ms_transform.hrl").
 
 %% Includes
 
@@ -22,6 +23,12 @@
          create/2,
          save/2,
          read/2
+        ]).
+
+%% Queries
+
+-export([
+         find_transactions/1
         ]).
 
 %% Macro definitions
@@ -66,6 +73,72 @@
 -type object() :: #transfer{} | #customer{} | #account{}.
 
 -type table_name() :: transfers | customers | accounts.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Public functions
+
+%% @doc Creates a new object in the given table. Returns error if
+%% already exists
+-spec create(table_name(), bn_model:object()) -> {ok, bn_model:object()} | error.
+create(Table, Object) ->
+  Name = object_name(Table),
+  Row = from_model(Name, Object),
+  io:format("ROW: ~p~n", [Row]),
+  case ets:insert_new(Table, Row) of
+    true ->
+      {ok, to_model(Row)};
+    false ->
+      error
+  end.
+
+%% @doc Saves a new object in the given table
+-spec save(table_name(), bn_model:object()) -> {ok, bn_model:object()}.
+save(Table, Object) ->
+  Name = object_name(Table),
+  Row = from_model(Name, Object),
+  ets:insert(Table, Row),
+  {ok, to_model(Row)}.
+
+%% @doc Reads an element of a table
+-spec read(table_name(), binary()) -> [bn_model:object()].
+read(Table, Id) ->
+  Rows = ets:lookup(Table, Id),
+  lists:map(fun to_model/1, Rows).
+
+%% @doc Returns the transactions of a given account
+-spec find_transactions(bn_model:account_id()) -> [bn_model:transfer()] | error.
+find_transactions(Id) ->
+  F = ets:fun2ms(fun(T = #transfer{sender = Sender, receiver = Receiver}) when Sender == Id orelse Receiver == Id ->
+                     T
+                 end),
+  Rows =
+    ets:select(transfers, F),
+  lists:map(fun to_model/1, Rows).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Internal functions
+
+%% @doc Takes the physical representation of an object and returns its
+%% logical representation
+-spec to_model(bn_db:object()) -> bn_model:object().
+to_model(Record) -> 
+  Name = element(1, Record),
+  Keys = keys(Name),
+  Values = tl(tuple_to_list(Record)),
+  Proplist = lists:zip(Keys, Values),
+  maps:from_list(Proplist).
+
+%% @doc Takes the logical representation of an object and returns its
+%% physical representation
+-spec from_model(bn_model:object_name(), bn_model:object()) -> bn_db:object().
+from_model(Name, Object) ->
+  Values =
+    lists:map(fun({Key, 'REQUIRED'}) ->
+                  maps:get(Key, Object);
+                 ({Key, Default}) ->
+                  maps:get(Key, Object, Default)
+              end, fields(Name)),
+  list_to_tuple([Name|Values]).
 
 %% @doc Dynamically returns information about the object's physical
 %% representation
@@ -114,60 +187,6 @@ object_name(Table) ->
     customers -> customer;
     accounts -> account
   end.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Public functions
-
-%% @doc Creates a new object in the given table. Returns error if
-%% already exists
--spec create(table_name(), bn_model:object()) -> {ok, bn_model:object()} | error.
-create(Table, Object) ->
-  Name = object_name(Table),
-  Row = from_model(Name, Object),
-  case ets:insert_new(Table, Row) of
-    true ->
-      {ok, to_model(Row)};
-    false ->
-      error
-  end.
-
-%% @doc Saves a new object in the given table
--spec save(table_name(), bn_model:object()) -> {ok, bn_model:object()}.
-save(Table, Object) ->
-  Name = object_name(Table),
-  Row = from_model(Name, Object),
-  ets:insert(Table, Row),
-  {ok, to_model(Row)}.
-
--spec read(table_name(), binary()) -> [bn_model:object()].
-read(Table, Id) ->
-  Rows = ets:lookup(Table, Id),
-  lists:map(fun to_model/1, Rows).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Internal functions
-
-%% @doc Takes the physical representation of an object and returns its
-%% logical representation
--spec to_model(bn_db:object()) -> bn_model:object().
-to_model(Record) -> 
-  Name = element(1, Record),
-  Keys = keys(Name),
-  Values = tl(tuple_to_list(Record)),
-  Proplist = lists:zip(Keys, Values),
-  maps:from_list(Proplist).
-
-%% @doc Takes the logical representation of an object and returns its
-%% physical representation
--spec from_model(bn_model:object_name(), bn_model:object()) -> bn_db:object().
-from_model(Name, Object) ->
-  Values =
-    lists:map(fun({Key, 'REQUIRED'}) ->
-                  maps:get(Key, Object);
-                 ({Key, Default}) ->
-                  maps:get(Key, Object, Default)
-              end, fields(Name)),
-  list_to_tuple([Name|Values]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Tests start

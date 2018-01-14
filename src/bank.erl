@@ -10,7 +10,8 @@
 -export([
          transfer/4,
          open_account/2,
-         new_customer/1
+         new_customer/1,
+         get_transactions/1
         ]). 
 
 
@@ -40,6 +41,11 @@ open_account(Customer, Currency) ->
 new_customer(Name) ->
   bn_logic:new_customer(Name).
 
-
+%% @doc Returns the transactions of a given account. Returns error if
+%% account does not belong to this bank.
+-spec get_transactions(Id :: bn_model:account_id()) -> [bn_model:transfer()] | error.
+get_transactions(Id) ->
+  bn_dal:find_transactions(Id).
+   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Internal functions

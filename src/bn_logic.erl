@@ -4,7 +4,7 @@
 %%
 %% @doc This module contains the bank's business logic
 
--module(bank).
+-module(bn_logic).
 
 %% Load eunit
 -ifdef(TEST).

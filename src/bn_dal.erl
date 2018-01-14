@@ -29,7 +29,8 @@
          create_account/1,
          read_account/1,
          create_customer/1,
-         read_customer/1
+         read_customer/1,
+         find_transactions/1
         ]).
 
 -export([
@@ -105,6 +106,7 @@ create_account(Account) ->
 read_account(Id) ->
   bn_db:read(accounts, Id).
 
+%% @doc Creates a new customer
 -spec create_customer(maps:map()) -> {ok, bn_model:customer()}.
 create_customer(Customer) ->
   gen_server:call(?SERVER, {create_customer, Customer}).
@@ -114,6 +116,15 @@ create_customer(Customer) ->
 read_customer(Id) ->
   bn_db:read(customers, Id).
 
+%% @doc Returns the transactions of the given account (not thread safe)
+-spec find_transactions(bn_model:account_id()) -> [bn_model:transfer()] | error.
+find_transactions(Id) ->
+  case bn_db:read(accounts, Id) of
+    [] ->
+      error;
+    _ ->
+      bn_db:find_transactions(Id)
+  end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Behaviour Callbacks
