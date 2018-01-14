@@ -2,7 +2,7 @@
 
 ## Part 1
 
-See the [data model](#data-model)
+See the [data model](#data-model).
 
 ## Part 2
 
@@ -137,7 +137,7 @@ Conceptually, banks have customers, and customers have accounts with which they 
 
 ### Logical Data Model
 
-Because each bank holds the information of its customers and their accounts in its own database, the logical model differs slightly from the conceptual one,
+Because each bank holds the information of its own customers and their accounts in its own database, the logical model differs slightly from the conceptual one,
 
 ![Logical Data Model](priv/logical.png)
 
