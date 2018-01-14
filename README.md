@@ -1,3 +1,7 @@
+# Index
+
+[TOC]
+
 # Overview
 
 ## Part 1
@@ -99,7 +103,7 @@ transfer_sm(consolidate, Transfer = #{type := Type}, Ctx) ->
   end.
 ```
 
-# Bank
+# Bank Server
 
 Bank is an erlang application set on top of a Cowboy server. It is a _toy_ banking server, which provides the following functionality:
 
@@ -231,7 +235,7 @@ would result in
 ```
 HTTP/1.1 200 OK
 [
-    {
+v    {
         "commission": 0,
         "consolidated": 1515910444,
         "created": 1515910444,
@@ -247,4 +251,28 @@ HTTP/1.1 200 OK
 ]
 ```
 
-# Assistant
+## Modules
+
+All modules have internal documentation. To give a more general perspective,
+
+**Application modules**
+- `bank.erl`: Contains the Banks API towards the transfer assistant
+- `bank_app.erl`
+- `bank_sup.erl`
+
+**Business logic modules**
+- `bn_logic.erl`: Main logic module (transfer cycles, etc).
+- `bn_cer.erl`
+- `bn_comm.erl`
+- `bn_error.erl`
+
+**Data model and DB**
+- `bn_dal.erl`: Data Access Layer gen_server: Ensures concurrency-safe access to DB.
+- `bn_db.erl`: Definition of physical model and DB access
+- `bn_model.erl`: Definition of logical model
+- `bn_table_handler.erl`
+
+**Misc**
+- `bn_time.erl`
+- `bn_utils.erl`
+- `bn_log.erl`
