@@ -1,5 +1,6 @@
-# Bank
+# Overview
 
+# Bank
 
 Bank is an erlang application set on top of a Cowboy server. It is a _toy_ banking server, which provides the following functionality:
 
@@ -146,3 +147,5 @@ HTTP/1.1 200 OK
     }
 ]
 ```
+
+# Assistant
