@@ -4,7 +4,7 @@
 %%
 %% @doc This module contains the bank's business logic
 
--module(bn_logic).
+-module(bank).
 
 %% Load eunit
 -ifdef(TEST).
@@ -29,8 +29,8 @@
 
 %% Macro definitions
 
--define(EXTERNAL_TRANSFER_MAX, 10000000). %% 1000 EUR (in centi-cents)
--define(EXTERNAL_TRANSFER_COMM, 50000). %% 5 EUR (in centi-cents)
+-define(EXTERNAL_TRANSFER_MAX, 100000). %% 1000 EUR (in cents)
+-define(EXTERNAL_TRANSFER_COMM, 500). %% 5 EUR (in cents)
 
 %% Type Definitions
 
@@ -77,9 +77,9 @@ transfer_sm(identify_receiver, Transfer = #{receiver := Receiver}, Ctx) ->
 transfer_sm(check_value, Transfer, Ctx) ->
   #{value := Value, currency := Currency, type := Type} = Transfer,
   case bn_cer:available(Currency) of
-    true ->
-      {error, {bad_currency, #{currency => Currency}}};
     false ->
+      {error, {bad_currency, #{currency => Currency}}};
+    true ->
       %% NOTE (new transfers): Refactor this if new transfer types are allowed
       case Type of
         internal ->
@@ -104,11 +104,12 @@ transfer_sm(commit, Transfer, Ctx) ->
     error ->
       {error, {no_balance, #{}}}
   end;
-transfer_sm(consolidate, Transfer = #{type := Type}, #{external := Bank}) ->
+transfer_sm(consolidate, Transfer = #{type := Type}, Ctx) ->
   case Type of
     internal ->
       consolidate_internal(Transfer);
     external ->
+      #{external := Bank} = Ctx,
       case bn_comm:consolidate(Bank, Transfer) of
         {ok, Updated} ->
           consolidate_external_out(Updated);
@@ -151,13 +152,17 @@ new_customer(Name) ->
 %% available and balance
 -spec consolidate_external_in(bn_model:transfer()) -> {ok, bn_model:transfer()}.
 consolidate_external_in(Transfer) ->
-  #{id := Id,
-    receiver := Receiver,
+  #{receiver := Receiver,
     value := Value,
     currency := Currency} = Transfer,
-  bn_dal:inc_available(Receiver, Value, Currency),
-  bn_dal:inc_balance(Receiver, Value, Currency),
-  {ok, _} = bn_dal:update_transfer(Id, #{consolidated => bn_time:now()}).
+  case identify_account(Receiver) of
+    {local, _} ->
+      bn_dal:inc_available(Receiver, Value, Currency),
+      bn_dal:inc_balance(Receiver, Value, Currency),
+      {ok, _} = bn_dal:create_transfer(Transfer#{consolidated => bn_time:now()});
+    _ ->
+      {error, {receiver_unidentified, #{}}}
+  end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Internal functions
@@ -177,7 +182,7 @@ identify_account(Id) ->
 
 %% @doc Returns the bank code of the given IBAN code. For this exercise, the IBAN must follow spanish format
 -spec get_bank(binary()) -> binary() | error.
-get_bank(Account) when size(Account) == 24 ->
+get_bank(Account) when size(Account) > 8 ->
   case Account of
     <<_Country:2/binary, _Control:2/binary, Bank:4/binary, _/binary>> ->
       Bank;
@@ -216,7 +221,8 @@ consolidate_external_out(Transfer) ->
 %% @doc Fails a transfer because it could not be consolidated with the
 %% external bank
 -spec fail(bn_model:transfer()) -> {ok, bn_model:transfer()}.
-fail(#{id := Id}) ->
+fail(#{id := Id, sender := Sender, value := Value, currency := Currency, commission := Commission}) ->
+  bn_dal:inc_available(Sender, Value + Commission, Currency),
   {ok, _} = bn_dal:update_transfer(Id, #{failed => bn_time:now()}). 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

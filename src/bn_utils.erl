@@ -32,10 +32,12 @@
 %% @doc Parses the required params from a map
 -spec parse(maps:map(), [atom()], function()) -> {maps:map(), [atom()], [atom()]}.
 parse(Map, Params, ParseFun) ->
-  lists:foldl(fun(Key, {Ok, NonValid, Missing}) ->
+  lists:foldl(fun({Key, Required}, {Ok, NonValid, Missing}) ->
                     case maps:get(Key, Map, null) of
-                      null ->
+                      null when Required ->
                         {Ok, NonValid, [Key|Missing]};
+                      null ->
+                        {Ok, NonValid, Missing};
                       Value ->
                         case ParseFun(Key, Value) of
                           {K, V} ->
@@ -81,11 +83,13 @@ basic_test_() ->
     end,
   [
    ?_assertEqual({#{a => 1, b => 2, c => 3}, [], []},
-                 parse(#{<<"a">> => 1, <<"b">> => 2, <<"c">> => 3}, [<<"a">>, <<"b">>, <<"c">>], ParseFun)),
+                 parse(#{<<"a">> => 1, <<"b">> => 2, <<"c">> => 3}, [{<<"a">>, true}, {<<"b">>, true}, {<<"c">>, true}], ParseFun)),
    ?_assertEqual({#{a => 1, b => 2}, [], [<<"c">>]},
-                 parse(#{<<"a">> => 1, <<"b">> => 2}, [<<"a">>, <<"b">>, <<"c">>], ParseFun)),
+                 parse(#{<<"a">> => 1, <<"b">> => 2}, [{<<"a">>, true}, {<<"b">>, true}, {<<"c">>, true}], ParseFun)),
    ?_assertEqual({#{a => 1, b => 2}, [], []},
-                 parse(#{<<"a">> => 1, <<"b">> => 2, <<"d">> => 3}, [<<"a">>, <<"b">>], ParseFun))
+                 parse(#{<<"a">> => 1, <<"b">> => 2, <<"d">> => 3}, [{<<"a">>, true}, {<<"b">>, true}], ParseFun)),
+   ?_assertEqual({#{a => 1, b => 2}, [], []},
+                 parse(#{<<"a">> => 1, <<"b">> => 2, <<"d">> => 3}, [{<<"a">>, true}, {<<"b">>, true}, {<<"c">>, false}], ParseFun))
   ].
 
 %% Tests end

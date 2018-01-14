@@ -53,7 +53,7 @@ serial_error(Type, Args) ->
 %% @doc Cowboy dependant: Prepares an error response
 error_resp(Req, {ErrorType, Args}) ->
   Map = serial_error(ErrorType, Args),
-  Body = cw_json:encode(Map),
+  Body = jiffy:encode(Map),
   cowboy_req:set_resp_header(<<"Content-Type">>,
                              <<"application/json">>,
                              cowboy_req:set_resp_body(Body, Req)).

@@ -58,10 +58,12 @@ start_link() ->
 stop() ->
   gen_server:stop(?SERVER).
 
+%% @doc Creates a new transfer
 -spec create_transfer(maps:map()) -> {ok, bn_model:transfer()}.
 create_transfer(Transfer) ->
   gen_server:call(?SERVER, {create_transfer, Transfer}).
 
+%% @doc Updates an existing transfer
 -spec update_transfer(Id :: bn_model:transfer_id(), Fields :: maps:map()) -> {ok, bn_model:transfer()} | error.
 update_transfer(Id, Fields) ->
   gen_server:call(?SERVER, {update_transfer, Id, Fields}).
@@ -230,7 +232,7 @@ inc_available_call(Id, TransferValue, TransferCurrency) ->
   #{available := Available, currency := Currency} = Account,
   CER = bn_cer:cer(TransferCurrency, Currency),
   Value = round(TransferValue * CER),
-  bn_db:save(accounts, Account#{value => Available + Value}),
+  bn_db:save(accounts, Account#{available => Available + Value}),
   ok.
 
 %% Balances
@@ -261,7 +263,7 @@ inc_balance_call(Id, TransferValue, TransferCurrency) ->
   #{balance := Balance, currency := Currency} = Account,
   CER = bn_cer:cer(TransferCurrency, Currency),
   Value = round(TransferValue * CER),
-  bn_db:save(accounts, Account#{value => Balance + Value}),
+  bn_db:save(accounts, Account#{balance => Balance + Value}),
   ok.
 
 
