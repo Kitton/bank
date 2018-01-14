@@ -26,64 +26,6 @@ rebar3 run
 
 By default, the server listens on port `8000`. The *port* and *bank code* (ie. IBAN Institution Code) can be set up through config files (examples can be found in the `priv/` directory).
 
-## API
-
-The _bank_ server offers a HTTP JSON API with three resources,
-
-- `/transfers` to order transactions
-- `/:iban/transfers` to fetch the transfers linked to an account
-- `/interbank/consolidations` used by other _bank_ servers to communicate an inbound transaction
-
-### /transfers
-
-Used to order transactions. For example, to send 1 Euro from account `ESXX000A1` to account `ESXX000B2`, we would do,
-
-```
-HTTP/1.1 POST http://localhost:8001/transfers
-Content-Type: application/json
-{
-    "currency": "EUR",
-    "receiver": "ESXX000B2",
-    "sender": "ESXX000A1",
-    "value": 100
-}
-```
-
-Field `value` is set in cents (eg. 1.23 EUR would be 123). All fields are mandatory.
-
-### /:iban/transfers
-
-Used to retrieve the transactions linked to an account. For example,
-
-```
-HTTP/1.1 GET http://localhost:8002/ESXX000B2/transfers
-{
-    "currency": "EUR",
-    "receiver": "ESXX000B2",
-    "sender": "ESXX000A1",
-    "value": 100
-}
-```
-
-would result in
-```
-HTTP/1.1 200 OK
-[
-    {
-        "commission": 0,
-        "consolidated": 1515910444,
-        "created": 1515910444,
-        "currency": "EUR",
-        "failed": null,
-        "id": "1804120628",
-        "preconsolidated": null,
-        "receiver": "ESXX000B2",
-        "sender": "ESXX000B1",
-        "type": "internal",
-        "value": 100
-    }
-]
-```
 
 ## Data Model
 
@@ -142,5 +84,63 @@ The system is highly modular and great emphasis has been placed on allowing it t
 
 There is a strong separation between the physical and logical models, to the point that if a different database software is desired, only the module `bn_db.erl` must be refactored. An in-house database implementation was chosen as a self-contained solution was required. Using a database like Postgres or MySQL would have required the tester to further download and configure packages.
 
-New transaction types can be added. Multi-currency support can be added by modifying only two functions in the `bn_cer.erl` module.
+New **transaction types** can be added with little to no effort. Multi-currency support can be added by modifying only two functions in the `bn_cer.erl` module.
 
+## API
+
+The _bank_ server offers a HTTP JSON API with three resources,
+
+- `/transfers` to order transactions
+- `/:iban/transfers` to fetch the transfers linked to an account
+- `/interbank/consolidations` used by other _bank_ servers to communicate an inbound transaction
+
+### /transfers
+
+Used to order transactions. For example, to send 1 Euro from account `ESXX000A1` to account `ESXX000B2`, we would do,
+
+```
+HTTP/1.1 POST http://localhost:8001/transfers
+Content-Type: application/json
+{
+    "currency": "EUR",
+    "receiver": "ESXX000B2",
+    "sender": "ESXX000A1",
+    "value": 100
+}
+```
+
+Field `value` is set in cents (eg. 1.23 EUR would be 123). All fields are mandatory.
+
+### /:iban/transfers
+
+Used to retrieve the transactions linked to an account. For example,
+
+```
+HTTP/1.1 GET http://localhost:8002/ESXX000B2/transfers
+{
+    "currency": "EUR",
+    "receiver": "ESXX000B2",
+    "sender": "ESXX000A1",
+    "value": 100
+}
+```
+
+would result in
+```
+HTTP/1.1 200 OK
+[
+    {
+        "commission": 0,
+        "consolidated": 1515910444,
+        "created": 1515910444,
+        "currency": "EUR",
+        "failed": null,
+        "id": "1804120628",
+        "preconsolidated": null,
+        "receiver": "ESXX000B2",
+        "sender": "ESXX000B1",
+        "type": "internal",
+        "value": 100
+    }
+]
+```
