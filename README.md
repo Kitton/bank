@@ -10,16 +10,29 @@ The bank server has been developed over a cowboy HTTP server. A node is started 
 
 The transfer assistant is a Phoenix server. It is still under construction and no web interface is provided. The module `Assistant.Banks` connects to the banks' HTTP API to order and retrieve transfers.
 
-To launch the demo, execute
+To compile the demo, execute
 ```
 $ ./demo.sh compile
 ```
 
-and then
+and then, in three different terminals,
 
+launch Bank A,
 ```
-$ ./demo.sh launch
+$ ./demo.sh bank_a
 ```
+
+launch Bank B,
+```
+$ ./demo.sh bank_a
+```
+
+launch the Assistant,
+```
+$ ./demo.sh assistant
+```
+
+
 
 ## Part 3
 
