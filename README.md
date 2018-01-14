@@ -2,11 +2,11 @@
 
 ## Part 1
 
-See the [data mode](#data-model)
+See the [data model](#data-model)
 
 ## Part 2
 
-The bank server has been developed over a cowboy HTTP server. A node is started for each bank (in this case Bank_A and Bank_B), and they communicate to consolidate _external_ transactions.
+The bank server has been developed over a cowboy HTTP server. A node is started for each bank (in this case Bank_A and Bank_B), and they communicate via HTTP to consolidate _external_ transactions.
 
 The transfer assistant is a Phoenix server. It is still under construction and no web interface is provided. The module `Assistant.Banks` connects to the banks' HTTP API to order and retrieve transfers.
 
