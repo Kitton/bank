@@ -51,7 +51,7 @@ Remember that values are given in cents. `Bank_A` is selected because it is the 
 `Assistant.Banks.get_transactions/2` can be used fetch the transactions associated to a given account. For example,
 
 ```
-Assistant.Banks.get_transactions("Bank_A", "ESXX000A1")
+Assistant.Banks.get_transactions("Bank_B", "ESXX000B2")
 ```
 
 returns all the transfers where account `ESXX000A1` is either the sender or the receiver.
