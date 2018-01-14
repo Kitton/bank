@@ -33,12 +33,12 @@ defmodule Assistant.Banks do
           {:error, reason} ->
             Logger.error("Connection error #{inspect reason}")
             :error
-          {:ok, %Response{status_code: "200", body: resp_body}} ->
-            transfer = Poison.decode(resp_body)
+          {:ok, %Response{status_code: 200, body: resp_body}} ->
+            transfer = Poison.decode!(resp_body)
             Logger.info("SUCCESS. Transaction ID: #{transfer["id"]}")
             {:ok, transfer}
           {:ok, %Response{body: resp_body}} ->
-            %{"error_type" => type} = Poison.decode(resp_body)
+            %{"type" => type} = Poison.decode!(resp_body)
             Logger.info("FAILURE. Transfer unsuccesful. Reason: #{type}")
             :error
         end
@@ -56,19 +56,19 @@ defmodule Assistant.Banks do
       endpoint ->
         response =
           HTTPoison.get(
-            endpoint <> "/#{account}/transactions",
+            endpoint <> "/#{account}/transfers",
             [{"Content-Type", "application/json"}],
             [])
         case response do
           {:error, reason} ->
             Logger.error("Connection error #{inspect reason}")
             :error
-          {:ok, %Response{status_code: "200", body: resp_body}} ->
-            transactions = Poison.decode(resp_body)
-            Logger.info("SUCCESS. Transactions: #{transactions}")
+          {:ok, %Response{status_code: 200, body: resp_body}} ->
+            transactions = Poison.decode!(resp_body)
+            Logger.info("SUCCESS. Transactions fetched for #{account}")
             {:ok, transactions}
           {:ok, %Response{body: resp_body}} ->
-            %{"error_type" => type} = Poison.decode(resp_body)
+            %{"type" => type} = Poison.decode!(resp_body)
             Logger.info("FAILURE. Transfer unsuccesful. Reason: #{type}")
             :error
         end
