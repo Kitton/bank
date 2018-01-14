@@ -20,14 +20,22 @@
          now/0
         ]).
 
+-export_type([
+              ts/0
+             ]).
+            
+
 %% Macro definitions
 
 %% Type Definitions
 
+%% @doc Timestamp
+-type ts() :: integer().
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Public functions
 
--spec now() -> integer().
+-spec now() -> ts().
 now() ->
   erlang:system_time(second).
 

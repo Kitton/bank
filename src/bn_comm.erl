@@ -27,7 +27,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Public functions
 
--spec consolidate(bn_model:transfer(), bn_model:transfer()) ->
+-spec consolidate(binary(), bn_model:transfer()) ->
                      {ok, bn_model:transfer()} |
                      {wait, bn_model:transfer()} |
                      {error, term()}.

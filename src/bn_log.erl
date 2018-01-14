@@ -28,22 +28,18 @@
 %% Public functions
 
 %% @doc Logs an info message with no arguments
--spec info(atom(), non_neg_integer(), string()) -> string().
 info(Module, Line, Message) ->
   info(Module, Line, Message, []).
 
 %% @doc Logs an info message
--spec info(atom(), non_neg_integer(), string(), [term()]) -> string().
 info(Module, Line, Format, Args) ->
   error_logger:info_msg("~p ~p ~p: " ++ Format ++ "~n", [Module, Line, self()] ++ Args).
 
 %% @doc Logs an error message with no arguments
--spec error(atom(), non_neg_integer(), string()) -> string().
 error(Module, Line, Message) ->
   bn_log:error(Module, Line, Message, []).
 
 %% @doc Logs an error message
--spec error(atom(), non_neg_integer(), string(), [term()]) -> string().
 error(Module, Line, Format, Args) ->
   error_logger:error_msg("~p ~p ~p: " ++ Format ++ "~n", [Module, Line, self()] ++ Args).
 

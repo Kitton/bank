@@ -30,13 +30,17 @@
 
 %% Application callbacks
 
-start(_StartType, _StartArgs) ->
+start(_, _) ->
   bn_log:info(?MODULE, ?LINE, "Starting application"),
+  %% Check for environment variables
+  Port = fetch_or_set(port, 8000),
+  fetch_or_set(bank_code, <<"0000">>),
+  %% Start Cowboy
   Dispatch = cowboy_router:compile([
                                     {'_', [{"/", bn_r_v, []}]}
                                    ]),
   {ok, _} = cowboy:start_clear(my_http_listener,
-                               [{port, 8001}],
+                               [{port, Port}],
                                #{env => #{dispatch => Dispatch}}
                               ),
   bank_sup:start_link().
@@ -46,7 +50,19 @@ stop(_State) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Internal functions
-      
+
+fetch_or_set(Env, Default) ->
+  case application:get_env(bank, Env) of
+      {ok, B} -> B;
+      _ ->
+        application:set_env(bank, Env, Default),
+        bn_log:error(?MODULE,
+                     ?LINE,
+                     "Environment variable ~s not set. Using default ~p instead",
+                     [Env, Default]),
+      Default
+    end.
+  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Tests start
 -ifdef(TEST).

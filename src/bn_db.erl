@@ -34,6 +34,7 @@
 -record(transfer,
         {
           id :: binary(),
+          type :: bn_model:transfer_type(),
           sender :: binary(),
           receiver :: binary(),
           value :: non_neg_integer(),
@@ -64,12 +65,15 @@
 
 -type object() :: #transfer{} | #customer{} | #account{}.
 
+-type table_name() :: transfers | customers | accounts.
+
 %% @doc Dynamically returns information about the object's physical
 %% representation
--spec fields(bn_model:object_name()) -> [{atom(), term}].
+-spec fields(bn_model:object_name()) -> [{atom(), term()}].
 fields(transfer) ->
   [
    {id, 'REQUIRED'},
+   {type, 'REQUIRED'},
    {sender, 'REQUIRED'},
    {receiver, 'REQUIRED'},
    {value, 'REQUIRED'},
@@ -103,7 +107,7 @@ keys(Object) ->
   lists:map(fun({K, _}) -> K end, fields(Object)).
 
 %% @doc Returns the record name for the given table
--spec object_name(atom()) -> atom().
+-spec object_name(table_name()) -> bn_model:object_name().
 object_name(Table) ->
   case Table of
     transfers -> transfer;
@@ -116,7 +120,7 @@ object_name(Table) ->
 
 %% @doc Creates a new object in the given table. Returns error if
 %% already exists
--spec create(atom(), bn_model:object()) -> {ok, bn_model:object()} | error.
+-spec create(table_name(), bn_model:object()) -> {ok, bn_model:object()} | error.
 create(Table, Object) ->
   Name = object_name(Table),
   Row = from_model(Name, Object),
@@ -128,14 +132,14 @@ create(Table, Object) ->
   end.
 
 %% @doc Saves a new object in the given table
--spec save(atom(), bn_model:object()) -> {ok, bn_model:object()}.
+-spec save(table_name(), bn_model:object()) -> {ok, bn_model:object()}.
 save(Table, Object) ->
   Name = object_name(Table),
   Row = from_model(Name, Object),
   ets:insert(Table, Row),
   {ok, to_model(Row)}.
 
--spec read(atom(), bn_model:object()) -> [bn_model:object()].
+-spec read(table_name(), binary()) -> [bn_model:object()].
 read(Table, Id) ->
   Rows = ets:lookup(Table, Id),
   lists:map(fun to_model/1, Rows).

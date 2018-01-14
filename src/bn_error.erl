@@ -17,6 +17,7 @@
 
 %% Exports
 -export([
+         serial_error/2
         ]).
 
 %% Macro definitions
@@ -36,7 +37,7 @@
 %% Public functions
 
 %% @doc Serializes an error
--spec serial_error(error_type(), #{}) -> #{}.
+-spec serial_error(error_type(), maps:map()) -> maps:map().
 serial_error(sender_unidentified, _Args) ->
   #{type => sender_unidentified,
     description => <<"TBD">>,

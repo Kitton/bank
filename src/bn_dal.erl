@@ -26,7 +26,10 @@
          dec_available/3,
          inc_balance/3,
          dec_balance/3,
-         read_account/1
+         create_account/1,
+         read_account/1,
+         create_customer/1,
+         read_customer/1
         ]).
 
 -export([
@@ -55,11 +58,11 @@ start_link() ->
 stop() ->
   gen_server:stop(?SERVER).
 
--spec create_transfer(#{}) -> {ok, bn_model:transfer()}.
+-spec create_transfer(maps:map()) -> {ok, bn_model:transfer()}.
 create_transfer(Transfer) ->
   gen_server:call(?SERVER, {create_transfer, Transfer}).
 
--spec update_transfer(Id :: bn_model:transfer_id(), Fields :: #{}) -> {ok, bn_model:transfer()} | error.
+-spec update_transfer(Id :: bn_model:transfer_id(), Fields :: maps:map()) -> {ok, bn_model:transfer()} | error.
 update_transfer(Id, Fields) ->
   gen_server:call(?SERVER, {update_transfer, Id, Fields}).
 
@@ -91,10 +94,24 @@ dec_balance(Account, Value, Currency) ->
 inc_balance(Account, Value, Currency) ->
   gen_server:call(?SERVER, {inc_balance, Account, Value, Currency}).
 
+-spec create_account(maps:map()) -> {ok, bn_model:account()} | error.
+create_account(Account) ->
+  gen_server:call(?SERVER, {create_account, Account}).
+
 %% @doc Reads an account (not thread safe)
 -spec read_account(bn_model:account_id()) -> [bn_model:account()].
 read_account(Id) ->
-  bn_db:read(account, Id).
+  bn_db:read(accounts, Id).
+
+-spec create_customer(maps:map()) -> {ok, bn_model:customer()}.
+create_customer(Customer) ->
+  gen_server:call(?SERVER, {create_customer, Customer}).
+
+%% @doc Reads an customer (not thread safe)
+-spec read_customer(bn_model:customer_id()) -> [bn_model:customer()].
+read_customer(Id) ->
+  bn_db:read(customers, Id).
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Behaviour Callbacks
@@ -124,6 +141,12 @@ handle_call({inc_balance, Account, Value, Currency}, _, State) ->
 handle_call({dec_balance, Account, Value, Currency}, _, State) ->
   Reply = dec_balance_call(Account, Value, Currency),
   {reply, Reply, State};
+handle_call({create_account, Account}, _, State) ->
+  Reply = create_account_call(Account),
+  {reply, Reply, State};
+handle_call({create_customer, Customer}, _, State) ->
+  Reply = create_customer_call(Customer),
+  {reply, Reply, State};
 handle_call(_, _, State) ->
   {noreply, State}.
 
@@ -152,20 +175,20 @@ code_change(_OldVersion, State, _Extra) ->
 %% Transfers
 
 %% @doc Creates a new transfer in the DB
--spec create_transfer_call(#{}) -> {ok, bn_model:transfer()}.
+-spec create_transfer_call(maps:map()) -> {ok, bn_model:transfer()}.
 create_transfer_call(Transfer) ->
-  Id = integer_to_binary(rand:uniform(1, 9999999999)),
+  Id = integer_to_binary(rand:uniform(9999999999)),
   Object = Transfer#{ id => Id,
                       created => bn_time:now()},
   case bn_db:create(transfers, Object) of
-    true ->
-      {ok, Object};
-    false ->
+    {ok, Created} ->
+      {ok, Created};
+    error ->
       create_transfer_call(Transfer)
   end.
 
 
--spec update_transfer_call(Id :: bn_model:transfer_id(), Fields :: #{}) -> {ok, bn_model:transfer()} | error.
+-spec update_transfer_call(Id :: bn_model:transfer_id(), Fields :: maps:map()) -> {ok, bn_model:transfer()} | error.
 update_transfer_call(Id, Fields) ->
   case bn_db:read(transfers, Id) of
     [] ->
@@ -183,60 +206,108 @@ update_transfer_call(Id, Fields) ->
 
 %% @doc Decreases an account's available balance. Returns error if the
 %% account goes under the established limit
--spec dec_available_call(Account :: bn_model:account_id(),
+-spec dec_available_call(Id :: bn_model:account_id(),
                          Value :: bn_model:value(),
                          Currency :: bn_model:currency()) -> ok | error.
-dec_available_call(Account, TransferValue, TransferCurrency) ->
-  [Account] = bn_db:read(accounts, Account),
+dec_available_call(Id, TransferValue, TransferCurrency) ->
+  [Account] = bn_db:read(accounts, Id),
   #{available := Available, currency := Currency} = Account,
   CER = bn_cer:cer(TransferCurrency, Currency),
   Value = round(TransferValue * CER),
   if Available - Value < ?LIMIT ->
-     error;
+      error;
      true ->
-      bn_db:save(accounts, Account#{available => Available - Value})
+      bn_db:save(accounts, Account#{available => Available - Value}),
+      ok
   end.
 
 %% @doc Increases an account's available balance
--spec inc_available_call(Account :: bn_model:account_id(),
-                           Value :: bn_model:value(),
-                           Currency :: bn_model:currency()) -> ok.
-inc_available_call(Account, TransferValue, TransferCurrency) ->
-  [Account] = bn_db:read(accounts, Account),
+-spec inc_available_call(Id :: bn_model:account_id(),
+                         Value :: bn_model:value(),
+                         Currency :: bn_model:currency()) -> ok.
+inc_available_call(Id, TransferValue, TransferCurrency) ->
+  [Account] = bn_db:read(accounts, Id),
   #{available := Available, currency := Currency} = Account,
   CER = bn_cer:cer(TransferCurrency, Currency),
   Value = round(TransferValue * CER),
-  bn_db:save(accounts, Account#{value => Available + Value}).
+  bn_db:save(accounts, Account#{value => Available + Value}),
+  ok.
 
 %% Balances
 
 %% @doc Decreases an account's real balance. Returns error if the
 %% account goes under the established limit
--spec dec_balance_call(Account :: bn_model:account_id(),
-                         Value :: bn_model:value(),
-                         Currency :: bn_model:currency()) -> ok | error.
-dec_balance_call(Account, TransferValue, TransferCurrency) ->
-  [Account] = bn_db:read(accounts, Account),
+-spec dec_balance_call(Id :: bn_model:account_id(),
+                       Value :: bn_model:value(),
+                       Currency :: bn_model:currency()) -> ok | error.
+dec_balance_call(Id, TransferValue, TransferCurrency) ->
+  [Account] = bn_db:read(accounts, Id),
   #{balance := Balance, currency := Currency} = Account,
   CER = bn_cer:cer(TransferCurrency, Currency),
   Value = round(TransferValue * CER),
   if Balance - Value < ?LIMIT ->
-     error;
+      error;
      true ->
-      bn_db:save(accounts, Account#{balance => Balance - Value})
+      bn_db:save(accounts, Account#{balance => Balance - Value}),
+      ok
   end.
 
 %% @doc Increases an account's real balance
--spec inc_balance_call(Account :: bn_model:account_id(),
-                           Value :: bn_model:value(),
-                           Currency :: bn_model:currency()) -> ok.
-inc_balance_call(Account, TransferValue, TransferCurrency) ->
-  [Account] = bn_db:read(accounts, Account),
+-spec inc_balance_call(Id :: bn_model:account_id(),
+                       Value :: bn_model:value(),
+                       Currency :: bn_model:currency()) -> ok.
+inc_balance_call(Id, TransferValue, TransferCurrency) ->
+  [Account] = bn_db:read(accounts, Id),
   #{balance := Balance, currency := Currency} = Account,
   CER = bn_cer:cer(TransferCurrency, Currency),
   Value = round(TransferValue * CER),
-  bn_db:save(accounts, Account#{value => Balance + Value}).
+  bn_db:save(accounts, Account#{value => Balance + Value}),
+  ok.
 
+
+%% Accounts
+
+%% @doc Creates a new account in the DB
+-spec create_account_call(maps:map()) -> {ok, bn_model:account()} | error.
+create_account_call(Account = #{customer := Customer}) ->
+  case bn_db:read(customers, Customer) of
+    [] ->
+      error;
+    _ ->
+      Object = Account#{ id => gen_iban(),
+                         created => bn_time:now()},
+      case bn_db:create(accounts, Object) of
+        {ok, Created} ->
+          {ok, Created};
+        error ->
+          create_account_call(Account)
+      end
+  end.
+
+%% @doc Randomly generates an account ID that follows the spanish IBAN
+%% format for this bank (except for the two sanity-check digits, which
+%% are left as XX)
+-spec gen_iban() -> bn_model:account_id().
+gen_iban() ->
+  {ok, BankCode} = application:get_env(bank, bank_code),
+  Rest = integer_to_binary(rand:uniform(9999999999999999)), %% 16 digits
+  Fill = list_to_binary(lists:duplicate(16 - size(Rest), 48)), %% 48 is "0" in ASCII
+  <<"ESXX", BankCode/binary, Fill/binary, Rest/binary>>.
+
+%% Customers
+
+%% @doc Creates a new customer in the DB
+-spec create_customer_call(maps:map()) -> {ok, bn_model:customer()}.
+create_customer_call(Customer) ->
+  Id = integer_to_binary(rand:uniform(999999)),
+  Object = Customer#{ id => Id,
+                      created => bn_time:now()},
+  case bn_db:create(customers, Object) of
+    {ok, Created} ->
+      {ok, Created};
+    error ->
+      create_customer_call(Customer)
+  end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Tests start

@@ -16,11 +16,16 @@
 %% Includes
 
 %% Exports
+
+%% Transfer API
 -export([
          transfer/4,
          open_account/2,
          new_customer/1
         ]).
+
+%% Inter-Bank API
+-export([consolidate_external_in/1]).
 
 %% Macro definitions
 
@@ -50,14 +55,14 @@ transfer(Sender, Receiver, Value, Currency) ->
       | commit
       | consolidate.
 
--spec transfer_sm(transfer_sm_state(), #{}, #{}) -> {ok, bn_model:transfer()} | {error, {bn_error:error_type(), #{}}}.
+-spec transfer_sm(transfer_sm_state(), maps:map(), maps:map()) -> {ok, bn_model:transfer()} | {error, {bn_error:error_type(), #{}}}.
 transfer_sm(identify_sender, Transfer = #{sender := Sender}, Ctx) ->
   case identify_account(Sender) of
     error ->
       {error, {sender_unidentified, #{bad_iban => Sender}}};
     {external, Bank} ->
       {error, {sender_not_local, #{bank => Bank}}};
-    {ok, _} ->
+    {local, _} ->
       transfer_sm(identify_receiver, Transfer, Ctx)
   end;
 transfer_sm(identify_receiver, Transfer = #{receiver := Receiver}, Ctx) ->
@@ -65,25 +70,25 @@ transfer_sm(identify_receiver, Transfer = #{receiver := Receiver}, Ctx) ->
     error ->
       {error, {receiver_unidentified, #{bad_iban => Receiver}}};
     {external, Bank} ->
-      transfer_sm(check_value, Transfer#{kind => external}, Ctx#{external => Bank});
-    {ok, _} ->
-      transfer_sm(check_value, Transfer#{kind => internal}, Ctx)
+      transfer_sm(check_value, Transfer#{type => external}, Ctx#{external => Bank});
+    {local, _} ->
+      transfer_sm(check_value, Transfer#{type => internal}, Ctx)
   end;
 transfer_sm(check_value, Transfer, Ctx) ->
-  #{value := Value, currency := Currency, kind := Kind} = Transfer,
+  #{value := Value, currency := Currency, type := Type} = Transfer,
   case bn_cer:available(Currency) of
     true ->
       {error, {bad_currency, #{currency => Currency}}};
     false ->
-      %% NOTE (new transfers): Refactor this if new transfer kinds are allowed
-      case Kind of
+      %% NOTE (new transfers): Refactor this if new transfer types are allowed
+      case Type of
         internal ->
           transfer_sm(commit, Transfer#{commission => 0}, Ctx);
         external when Value =< ?EXTERNAL_TRANSFER_MAX ->
           transfer_sm(commit,
                       Transfer#{commission => ?EXTERNAL_TRANSFER_COMM},
                       Ctx);
-        external ->
+       external ->
           {error, {bad_value, #{limit => ?EXTERNAL_TRANSFER_COMM}}}
       end
   end;
@@ -99,12 +104,12 @@ transfer_sm(commit, Transfer, Ctx) ->
     error ->
       {error, {no_balance, #{}}}
   end;
-transfer_sm(consolidate, Transfer = #{kind := Kind}, #{external := Bank}) ->
-  case Kind of
+transfer_sm(consolidate, Transfer = #{type := Type}, #{external := Bank}) ->
+  case Type of
     internal ->
       consolidate_internal(Transfer);
     external ->
-      case bn_comm:call_bank(Bank, Transfer) of
+      case bn_comm:consolidate(Bank, Transfer) of
         {ok, Updated} ->
           consolidate_external_out(Updated);
         {wait, PreConsolidated} ->
@@ -128,19 +133,31 @@ open_account(Customer, Currency) ->
     true ->
       Result =
         bn_dal:create_account(#{customer => Customer, currency => Currency}),
-        case Result of
-          error ->
-            {error, customer_unknown};
-          {ok, Account} ->
-            {ok, Account}
-        end
+      case Result of
+        error ->
+          {error, customer_unknown};
+        {ok, Account} ->
+          {ok, Account}
+      end
   end.
       
+
 %% @doc Registers a new customer in the bank
 -spec new_customer(Name :: binary()) -> {ok, bn_model:customer()}.
 new_customer(Name) ->
   bn_dal:create_customer(#{name => Name}).
 
+%% @doc Consolidates an external, incoming transfer: Increases the receiver's
+%% available and balance
+-spec consolidate_external_in(bn_model:transfer()) -> {ok, bn_model:transfer()}.
+consolidate_external_in(Transfer) ->
+  #{id := Id,
+    receiver := Receiver,
+    value := Value,
+    currency := Currency} = Transfer,
+  bn_dal:inc_available(Receiver, Value, Currency),
+  bn_dal:inc_balance(Receiver, Value, Currency),
+  {ok, _} = bn_dal:update_transfer(Id, #{consolidated => bn_time:now()}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Internal functions
@@ -183,18 +200,6 @@ consolidate_internal(Transfer) ->
   bn_dal:inc_available(Receiver, Value, Currency),
   bn_dal:inc_balance(Receiver, Value, Currency),
   bn_dal:dec_balance(Sender, Value + Commission, Currency),
-  {ok, _} = bn_dal:update_transfer(Id, #{consolidated => bn_time:now()}).
-  
-%% @doc Consolidates an external, incoming transfer: Increases the receiver's
-%% available and balance
--spec consolidate_external_in(bn_model:transfer()) -> {ok, bn_model:transfer()}.
-consolidate_external_in(Transfer) ->
-  #{id := Id,
-    receiver := Receiver,
-    value := Value,
-    currency := Currency} = Transfer,
-  bn_dal:inc_available(Receiver, Value, Currency),
-  bn_dal:inc_balance(Receiver, Value, Currency),
   {ok, _} = bn_dal:update_transfer(Id, #{consolidated => bn_time:now()}).
 
 %% @doc Consolidates an external, outgoing transfer: Decreases the
