@@ -10,6 +10,8 @@ The bank server has been developed over a cowboy HTTP server. A node is started 
 
 The transfer assistant is a Phoenix server. It is still under construction and no web interface is provided. The module `Assistant.Banks` connects to the banks' HTTP API to order and retrieve transfers.
 
+### Demo
+
 To compile the demo, execute
 ```
 $ ./demo.sh compile
@@ -32,7 +34,27 @@ launch the Assistant,
 $ ./demo.sh assistant
 ```
 
+The bank's databases have been populated with the following accounts,
 
+- `ESXX000A1` in `Bank A`, with 20k EUR, owned by _Jose_
+- `ESXX000B1` in `Bank B`, with 20k EUR, owned by _Antonio_
+- `ESXX000B2` in `Bank B`, with 0 EUR, owned by _Maria_
+
+to make transactions, invoke `Assistant.Banks.transfer/4`. For example, to transfer 1 EUR from Jose's account to Marías account, run
+
+```
+Assistant.Banks.transfer("Bank_A", "ESXX000A1", "ESXX000B2", 100, "EUR")
+```
+
+Remember that values are given in cents. `Bank_A` is selected because it is the sender's bank. Please note that external transactions fail to be consolidated **30% of the time** (see `bank/bn_comm.erl`).
+
+`Assistant.Banks.get_transactions/2` can be used fetch the transactions associated to a given account. For example,
+
+```
+Assistant.Banks.get_transactions("Bank_A", "ESXX000A1")
+```
+
+returns all the transfers where account `ESXX000A1` is either the sender or the receiver.
 
 ## Part 3
 
@@ -42,7 +64,7 @@ The part that requires most work is the Phoenix server, as very little work has 
 
 **After implementation, is there any design decision that you would have done different?**
 
-Because this is a demo, I should have lessened the requirements on the architecture of the bank server, in order to free some time to give the transfer assistant a web interface.
+Because this is a demo, I should have lessened the requirements on the architecture of the bank server, in order to free some time to work on the transfer assistant (and give it a web interface).
 
 I have used ETS tables as the storage implementation, which means the database is destroyed every time the servers are restarted. Using DETS would have taken almost the same time and would have allowed for persistence.
 
