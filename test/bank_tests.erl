@@ -23,12 +23,12 @@
 %% Public functions
 
 run() ->
-  Tests = open_account_tests(),
+  Tests = open_account(),
   lists:foreach(fun(F) ->
                     F()
                 end, Tests).
   
-open_account_tests() ->
+open_account() ->
   {ok, Bank} = application:get_env(bank, bank_code),
     {ok, #{id := C1}} = bn_logic:new_customer(<<"customer_1">>),
     {ok, #{id := C2}} = bn_logic:new_customer(<<"customer_2">>),
