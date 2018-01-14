@@ -37,8 +37,9 @@ start(_, _) ->
   fetch_or_set(bank_code, <<"0000">>),
   %% Start Cowboy
   Dispatch = cowboy_router:compile([
-                                    {'_', [{"/interbank/consolidations/", bn_r_consolidations, []}]},
-                                    {'_', [{"/transfers/", bn_r_transfers, []}]}
+                                    {'_', [{"/transfers/", bn_r_transfers, []},
+                                           {"/interbank/consolidations/", bn_r_consolidations, []},
+                                           {"/:account/transfers/", bn_r_account_transfers, []}]}
                                    ]),
   {ok, _} = cowboy:start_clear(my_http_listener,
                                [{port, Port}],

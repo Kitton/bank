@@ -33,7 +33,8 @@
       | bad_currency
       | bad_value
       | no_balance
-      | consolidation_failed.
+      | consolidation_failed
+      | account_not_found.
 
 -type api_error() ::
         method_not_allowed |
@@ -44,10 +45,10 @@
 
 %% @doc Serializes an error
 -spec serial_error(error_type(), maps:map()) -> maps:map().
-serial_error(Type, Args) ->
+serial_error(Type, _Args) ->
   #{type => Type,
     description => <<"To be defined">>,
-    args => Args
+    args => #{}
    }.
 
 %% @doc Cowboy dependant: Prepares an error response

@@ -32,12 +32,14 @@
                      {wait, bn_model:transfer()} |
                      {error, term()}.
 consolidate(Bank, Transfer = #{id := Id}) ->
+  io:format("~s~n", [Bank]),
   case bank_endpoint(Bank) of
     error ->
       {error, {unknown_bank, Bank}};
     Endpoint ->
       case rand:uniform(99) of
         N when N < 30 -> %% Simulated success rate of 30%
+          io:format("1~n"),
           {error, connection_error};
         _ ->
           Response =
@@ -46,21 +48,26 @@ consolidate(Bank, Transfer = #{id := Id}) ->
                              post,
                              jiffy:encode(Transfer),
                              []),
+          {ok, Updated} = bn_dal:update_transfer(Id, #{preconsolidated => bn_time:now()}),
           case Response of
             {error, Reason} ->
+              io:format("1~n"),
               {error, Reason};
             {ok, "200", _, Body} ->
               try jiffy:decode(Body, [return_maps]) of
-                  Transfer = #{consolidated := null} ->
-                  {ok, Updated} = bn_dal:update_transfer(Id, #{preconsolidated => bn_time:now()}),
+                  Transfer = #{<<"consolidated">> := null} ->
                   {wait, Updated};
-                  Consolidated ->
-                  {ok, Consolidated}
+                  #{<<"consolidated">> := C} ->
+                  {ok, _} =
+                    bn_dal:update_transfer(Id,
+                                           #{consolidated => bn_utils:to_integer(C)})
               catch
                 _:_ ->
+                  io:format("1~n"),
                   {error, {bad_json, Body}}
               end;
             {ok, Code, _, _} ->
+              io:format("4~n"),
               {error, {http_error, Code}}
           end
       end
@@ -71,10 +78,10 @@ consolidate(Bank, Transfer = #{id := Id}) ->
 
 %% @doc Returns the bank's API endpoint
 -spec bank_endpoint(binary()) -> string() | error.
-bank_endpoint(<<"0001">>) ->
-  "http://localhost:8001/external";
-bank_endpoint(<<"0002">>) ->
-  "http://localhost:8002/external";
+bank_endpoint(<<"000A">>) ->
+  "http://localhost:8001/interbank/consolidations";
+bank_endpoint(<<"000B">>) ->
+  "http://localhost:8002/interbank/consolidations";
 bank_endpoint(_) ->
   error.
 
@@ -84,8 +91,8 @@ bank_endpoint(_) ->
 
 basic_test_() ->
   [
-   ?_assertEqual("http://localhost:8001/external", bank_endpoint(<<"0001">>)),
-   ?_assertEqual("http://localhost:8002/external", bank_endpoint(<<"0002">>)),
+   ?_assertEqual("http://localhost:8001/interbank/consolidations", bank_endpoint(<<"000A">>)),
+   ?_assertEqual("http://localhost:8002/interbank/consolidations", bank_endpoint(<<"000B">>)),
    ?_assertEqual(error, bank_endpoint(<<"ZZZZ">>)),
    ?_assertEqual({error, {unknown_bank, <<"ZZZZ">>}}, consolidate(<<"ZZZZ">>, #{id => <<"123">>}))
   ].
