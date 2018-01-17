@@ -9,7 +9,7 @@ defmodule Assistant.Application do
     # Define workers and child supervisors to be supervised
     children = [
       # Start the Ecto repository
-      supervisor(Assistant.Repo, []),
+#      supervisor(Assistant.Repo, []),
       # Start the endpoint when the application starts
       supervisor(AssistantWeb.Endpoint, []),
       # Start your own worker by calling: Assistant.Worker.start_link(arg1, arg2, arg3)

@@ -6,8 +6,8 @@
 use Mix.Config
 
 # General application configuration
-config :assistant,
-  ecto_repos: [Assistant.Repo]
+#config :assistant,
+#  ecto_repos: [Assistant.Repo]
 
 # Configures the endpoint
 config :assistant, AssistantWeb.Endpoint,
