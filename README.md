@@ -26,7 +26,7 @@ $ ./demo.sh bank_a
 
 launch Bank B,
 ```
-$ ./demo.sh bank_a
+$ ./demo.sh bank_b
 ```
 
 launch the Assistant,
