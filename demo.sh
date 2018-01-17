@@ -8,7 +8,7 @@ case "${1:-''}" in
     'compile')
         echo "Compiling bank... "
         cd bank/
-        rebar3 release
+        ./rebar3 release
         cd ..
         echo "Compiling assistant... "
         cd assistant/
